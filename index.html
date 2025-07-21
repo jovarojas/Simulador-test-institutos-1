@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="simulador unach preuniversitario San Marcos Riobamba">
+    <meta name="keywords" content="simulador, unach, ingreso, universidad, practic">
+    <meta name="author" content="Jovanna Rojas Malave">
+    <title>SIMULADOR INSTITUTOS Nº1</title>
+    <link rel="icon" href="favicon.ico">
+    <!--
+    Autor: Jovanna Rojas Malave
+    GitHub: https://github.com/jovarojas
+    LinkedIn: www.linkedin.com/in/jovannarojasm -->
+    <script>
+        window.addEventListener("DOMContentLoaded", function () {
+            let preguntaActual = parseInt(localStorage.getItem("preguntaActual")) || 0; // Cargar pregunta guardada o iniciar en 0
+            let preguntas = document.querySelectorAll(".pregunta");
+            let tiempoRestante = parseInt(localStorage.getItem("tiempoRestante")) || 2700; // Cargar tiempo o iniciar en 1 hora;
+            let timer;
+            let respuestasCorrectas = {
+                q1: "b", q2: "c", q3: "c", q4: "a", q5: "b", q6: "a", q7: "d", q8: "b", q9: "b", q10: "a", q11: "a", q12: "b",
+                q13: "b", q14: "a", q15: "a", q16: "d", q17: "b", q18: "c", q19: "a", q20: "b", q21: "b", q22: "a", q23: "c",
+                q24: "d", q25: "b", q26: "a", q27: "a", q28: "d", q29: "c", q30: "c", q31: "c", q32: "b", q33: "b", q34: "a",
+                q35: "d", q36: "b", q37: "b", q38: "d", q39: "c", q40: "d"
+            };
+
+            let respuestasUsuario = JSON.parse(localStorage.getItem("respuestasUsuario")) || {};
+
+            function iniciarTemporizador() {
+                if (timer) {
+                    clearInterval(timer); // Detener cualquier temporizador anterior
+                }
+
+                timer = setInterval(function () {
+                    tiempoRestante--;
+                    localStorage.setItem("tiempoRestante", tiempoRestante); // Guardar tiempo restante
+
+                    let minutos = Math.floor(tiempoRestante / 60);
+                    let segundos = tiempoRestante % 60;
+                    document.getElementById("timer").innerText = "Tiempo restante: " + minutos + ":" + (segundos < 10 ? '0' : '') + segundos;
+
+                    if (tiempoRestante <= 0) {
+                        clearInterval(timer);
+                        mostrarResultados();
+                    }
+                }, 1000);
+            }
+
+
+            function actualizarContador() {
+                document.getElementById("contador").innerText = "Pregunta " + (preguntaActual + 1) + " de " + preguntas.length;
+                localStorage.setItem("preguntaActual", preguntaActual); // Guardar progreso
+            }
+
+            function siguientePregunta() {
+                let nombrePregunta = "q" + (preguntaActual + 1);
+                let seleccionada = document.querySelector("input[name=" + nombrePregunta + "]:checked");
+
+                if (seleccionada) {
+                    respuestasUsuario[nombrePregunta] = seleccionada.value;
+                }
+
+                localStorage.setItem("respuestasUsuario", JSON.stringify(respuestasUsuario));
+
+                //la clase active se va moviendo en cada pregunta por lo cual hay que retirarla de la "anterior"
+                preguntas[preguntaActual].classList.remove("active");
+                preguntaActual++; //Se incrementa para marcar la posicion de la pregunta
+
+                if (preguntaActual < preguntas.length) {
+                    preguntas[preguntaActual].classList.add("active"); //se le agrega la clase active a la nueva pregunta actual
+                    document.getElementById("prevButton").disabled = false;
+                    actualizarContador();
+                } else {
+                    mostrarResultados();
+                }
+
+                if (preguntaActual === preguntas.length - 1) {
+                    document.getElementById("nextButton").innerText = "Finalizar";
+                }
+            }
+            /*Ir a la pregunta anterior y guardar el proceso*/
+            function preguntaAnterior() {
+                preguntas[preguntaActual].classList.remove("active");
+                preguntaActual--;
+
+                if (preguntaActual >= 0) {
+                    preguntas[preguntaActual].classList.add("active");
+                    actualizarContador();
+                }
+
+                if (preguntaActual === 0) {
+                    document.getElementById("prevButton").disabled = true;
+                }
+
+                document.getElementById("nextButton").innerText = "Siguiente";
+            }
+
+            function mostrarResultados() {
+                clearInterval(timer);
+                localStorage.removeItem("tiempoRestante"); // Limpiar tiempo restante al finalizar
+
+                let aciertos = 0;
+                let puntajeFinal = 0;
+
+                let detalleResultados = document.getElementById("detalleResultados");
+                detalleResultados.innerHTML = "<h3>Resultados detallados:</h3>";
+
+                for (let i = 0; i < preguntas.length; i++) {
+                    let pregunta = preguntas[i];
+                    let nombrePregunta = "q" + (i + 1);
+                    let respuestaUsuario = respuestasUsuario[nombrePregunta] || "No respondida";
+                    let correcta = respuestasCorrectas[nombrePregunta];
+
+                    let resultadoTexto = "<p><strong>Pregunta " + (i + 1) + ":</strong> ";
+
+                    if (respuestaUsuario === "No respondida") {
+                        resultadoTexto += "⚠️ No respondida</p>";
+                    } else if (respuestaUsuario === correcta) {
+                        aciertos++;
+                        resultadoTexto += "✅ Correcta (" + respuestaUsuario.toUpperCase() + ")</p>";
+                    } else {
+                        resultadoTexto += "❌ Incorrecta (Tu respuesta: " + respuestaUsuario.toUpperCase() + " | Correcta: " + correcta.toUpperCase() + ")</p>";
+                    }
+
+                    detalleResultados.innerHTML += resultadoTexto;
+                }
+
+                puntajeFinal = (aciertos / preguntas.length) * 1000; // Ajuste según escala
+
+                document.getElementById("resultado").innerText = "Examen finalizado. Aciertos: " + aciertos + " de " + preguntas.length;
+                document.getElementById("puntaje").innerHTML = "Puntaje final: " + puntajeFinal.toFixed(2) + "/1000";
+
+                // Ocultar elementos innecesarios después del examen
+                document.getElementById("nextButton").style.display = "none";
+                document.getElementById("prevButton").style.display = "none";
+                document.getElementById("timer").style.display = "none";
+                document.getElementById("contador").style.display = "none";
+
+                // Ocultar todas las preguntas al finalizar
+                for (let i = 0; i < preguntas.length; i++) {
+                    preguntas[i].style.display = "none";
+                }
+            }
+
+            // Cargar respuestas guardadas y restaurar la pregunta actual
+            function cargarRespuestasGuardadas() {
+                let nombresPreguntas = Object.keys(respuestasUsuario);
+
+                for (let i = 0; i < nombresPreguntas.length; i++) {
+                    let nombrePregunta = nombresPreguntas[i];
+                    let opcionSeleccionada = document.querySelector('input[name="' + nombrePregunta + '"][value="' + respuestasUsuario[nombrePregunta] + '"]');
+                    if (opcionSeleccionada) {
+                        opcionSeleccionada.checked = true;
+                    }
+                }
+
+                // Restaurar la última pregunta activa
+                for (let i = 0; i < preguntas.length; i++) {
+                    preguntas[i].classList.remove("active");
+                }
+
+                preguntas[preguntaActual].classList.add("active"); // Mostrar la última pregunta vista
+                actualizarContador();
+            }
+
+            const p = "sanmarcos2025";
+
+            function pedirContraseña() {
+                document.getElementById("contenidoTest").style.display = "none";
+            }
+
+            function verificarContraseña() {
+                let inputP = document.getElementById("pInput").value;
+
+                if (inputP === p) {
+                    document.getElementById("login").style.display = "none";
+                    document.getElementById("contenidoTest").style.display = "block";
+                    cargarRespuestasGuardadas();
+                    iniciarTemporizador();
+                } else {
+                    alert("Contraseña incorrecta, intenta de nuevo.");
+                    document.getElementById("pInput").value = "";
+                }
+            }
+
+            function reiniciarTest() {
+                localStorage.clear();
+                location.reload();
+            }
+
+            // Vincular funciones a botones si están presentes
+            document.getElementById("nextButton")?.addEventListener("click", siguientePregunta);
+            document.getElementById("prevButton")?.addEventListener("click", preguntaAnterior);
+            document.getElementById("verificarBtn")?.addEventListener("click", verificarContraseña);
+            document.getElementById("reiniciarBtn")?.addEventListener("click", reiniciarTest);
+
+            // Mostrar pantalla de contraseña si aplica
+            pedirContraseña();
+        })
+    </script>
+    <style>
+        * {
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            margin: 20px;
+            font-size: 150%;
+        }
+
+        footer,
+        h2 {
+            text-align: center;
+        }
+
+        h2 {
+            line-height: 100px;
+            background-color: #00345d;
+            color: white;
+        }
+
+        #login {
+            position: relative;
+        }
+
+        [alt*="fija"] {
+            border-radius: 50%;
+            position: fixed;
+            bottom: 5px;
+            right: 5px;
+            max-height: 100px;
+            width: auto;
+        }
+
+        footer {
+            background-color: lightgray;
+            border: #00345d groove 2px;
+            padding: 10px;
+            font-weight: bold;
+        }
+
+        header img {
+            float: left;
+        }
+
+        #quiz {
+            clear: both;
+            overflow: hidden;
+        }
+
+        .cuadrado {
+            width: 150px;
+            height: 150px;
+        }
+
+        .rectangulo {
+            height: 150px;
+            width: 400px;
+        }
+
+        .pregunta {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            float: right;
+            width: 80%;
+            padding: 10px;
+        }
+
+        input {
+            margin: 10px 5px;
+            transform: scale(1.3);
+        }
+
+        p+img {
+            margin-left: 5px;
+            max-width: 90%;
+        }
+
+        .active {
+            display: block;
+            opacity: 1;
+            background-color: #b3c7dbAA;
+        }
+
+        button {
+            padding: 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 20px;
+            border-radius: 10px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        #timer {
+            font-weight: bold;
+            color: red;
+            margin-bottom: 10px;
+            display: block;
+            float: right;
+            border: 2px solid black;
+            padding: 10px;
+        }
+
+        #contador {
+            font-size: 20px;
+            margin-bottom: 10px;
+            display: block;
+            float: left;
+            border: 2px solid black;
+            padding: 10px;
+            background-color: lightgray;
+        }
+
+        p>span {
+            font-size: 300%;
+            margin: 10px;
+        }
+
+
+        #prevButton {
+            float: left;
+            clear: both;
+        }
+
+        #nextButton {
+            float: right;
+
+        }
+
+        #reiniciar {
+            float: left;
+            margin-top: 24px;
+        }
+
+        #pInput {
+            margin-right: 30px;
+
+        }
+
+        table img {
+            max-width: 700px;
+        }
+
+        table,
+        tr,
+        td,
+        th {
+            border: solid 2px black;
+            border-collapse: collapse;
+            text-align: center;
+            padding: 10px;
+        }
+
+
+        /* Adaptación para pantallas moviles */
+        @media screen and (max-width: 768px) {
+            body {
+                font-size: 120%;
+                margin: 10px;
+            }
+
+            h2 {
+                font-size: 20px;
+                line-height: normal;
+                padding: 10px;
+            }
+
+            header img {
+                float: none;
+                display: block;
+                margin: 0 auto;
+            }
+
+            #quiz {
+                width: 100%;
+            }
+
+            .pregunta {
+                width: 95%;
+                float: none;
+            }
+
+            #timer,
+            #contador {
+                font-size: 16px;
+                float: none;
+                display: block;
+                text-align: center;
+                width: 93%;
+            }
+
+            button {
+                width: 100%;
+                font-size: 18px;
+            }
+
+            #prevButton,
+            #nextButton {
+                float: none;
+                display: block;
+                width: 98%;
+                text-align: center;
+            }
+
+            #reiniciar {
+                float: none;
+                display: block;
+                margin: 10px auto;
+                text-align: center;
+            }
+
+            .pregunta p {
+                margin: 16px;
+            }
+
+            table {
+                margin-right: 16px;
+            }
+
+            .secuencia {
+                width: 90%;
+                height: 90px;
+            }
+
+            .rectangulo {
+                width: 90%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="login" style="text-align:center; padding: 20px;">
+        <h2>Ingrese la contraseña para acceder al test</h2>
+        <input type="password" id="pInput" autofocus>
+        <button id="verificarBtn">Ingresar</button>
+        <img src="images/logo.png" alt="imagen fija">
+    </div>
+
+    <div id="contenidoTest" style="display: none;">
+        <header>
+            <img src="images/logo.png" alt="logo del preuniversitario">
+            <h2>SIMULADOR INSTITUTOS Nº1<br>PREUNIVERSITARIO SAN MARCOS</h2>
+            <button id="reiniciarBtn">Reiniciar Test</button>
+            <p id="timer">Tiempo restante: 45:00</p>
+        </header>
+
+        <div id="quiz">
+            <p id="contador">Pregunta 1 de 40</p>
+            <!--PREGUNTA 1 A LA 20-->
+            <div class="pregunta active">
+                <p>El valor que cobra una empresa por podar el césped en áreas verdes es de 0.40 USD por cada metro
+                    cuadrado. Si un conjunto residencial tiene 2 espacios con áreas verdes de 75 metros de largo por 6
+                    metros de ancho cada uno, determine el valor, en dólares, que debe pagar la administración</p>
+                <input type="radio" name="q1" value="a">900<br>
+                <input type="radio" name="q1" value="b">360<br>
+                <input type="radio" name="q1" value="c">450<br>
+                <input type="radio" name="q1" value="d">180<br>
+            </div>
+            <div class="pregunta">
+                <p>Al soltar un péndulo se toman mediciones de la altura, en centímetros, en diferentes posiciones de
+                    cada oscilación como se muestra en la progresión:</p>
+                <p>√256; √64; √16; ___ </p>
+                <p>¿Qué altura tendrá el péndulo en su cuarta oscilación? </p>
+                <input type="radio" name="q2" value="a">1<br>
+                <input type="radio" name="q2" value="b">√12<br>
+                <input type="radio" name="q2" value="c">2<br>
+                <input type="radio" name="q2" value="d">√15<br>
+            </div>
+
+            <div class="pregunta">
+                <p>Un taller automotriz cuenta con 8 técnicos especializados que se demoran 4 horas en realizar 8
+                    mantenimientos de distintos autos. Si el dueño del taller decide contratar a 1 técnico adicional,
+                    ¿cuántos mantenimientos se podrán realizar en 8 horas?</p>
+                <input type="radio" name="q3" value="a">7<br>
+                <input type="radio" name="q3" value="b">9<br>
+                <input type="radio" name="q3" value="c">18<br>
+                <input type="radio" name="q3" value="d">25<br>
+            </div>
+
+            <div class="pregunta">
+                <p>Diana utiliza miel de abeja para complementar la alimentación de su hija. Para ello, realiza una
+                    tabla con los valores que recuerda y que forman una relación lineal. </p>
+                <table>
+                    <tr>
+                        <th>Cantidad de miel en el frasco (gr)</th>
+                        <th>Días de consumo</th>
+                    </tr>
+                    <tr>
+                        <td>304</td>
+                        <td>8</td>
+                    </tr>
+                    <tr>
+                        <td>152</td>
+                        <td>16</td>
+                    </tr>
+                </table>
+                <p>Para prever la compra de miel se debe tomar en cuenta que un frasco lleno tiene ____ gramos y dura
+                    ____ días. </p>
+                <input type="radio" name="q4" value="a">608 ; 40<br>
+                <input type="radio" name="q4" value="b">456 ; 24<br>
+                <input type="radio" name="q4" value="c">456 ; 32<br>
+                <input type="radio" name="q4" value="d">608 ; 32<br>
+            </div>
+
+            <div class="pregunta">
+                <p>Los meteorólogos aseguran que la probabilidad de que mañana el día esté nublado es del 5 %. Además,
+                    hay una probabilidad del 15 % de que llueva y un 80 % de que esté soleado. ¿Cuál es la probabilidad
+                    de que no llueva mañana?</p>
+                <input type="radio" name="q5" value="a">80 %<br>
+                <input type="radio" name="q5" value="b">85 %<br>
+                <input type="radio" name="q5" value="c">15 %<br>
+                <input type="radio" name="q5" value="d">95 %<br>
+            </div>
+
+            <div class="pregunta">
+                <p>Para controlar el ingreso de buses a una terminal, una compañía coloca una maquina de boletos que
+                    entregan el código según el orden de llegada tal y como se muestra en la serie.</p>
+                <p style="text-align: center;">2C,4G,3K,50,4S,6W,------</p>
+                <p>Si al llegar el séptimo bus, la maquina sufre un apagón por un corto circuito determine el código que
+                    se deberá entregar a dicha unidad para no alterar el orden</p>
+                <input type="radio" name="q6" value="a">5 A<br>
+                <input type="radio" name="q6" value="b">5 E<br>
+                <input type="radio" name="q6" value="c">7 E<br>
+                <input type="radio" name="q6" value="d">7 A<br>
+            </div>
+            <div class="pregunta">
+                <p>Identifique la suma de los números dentro de los triángulos grises y dentro de los círculos negros,
+                    multiplicada por la suma de los números ubicados en los cuadrados blancos.</p>
+                <img src="images/1a.png" alt="figuras con numeros"><br>
+                <input type="radio" name="q7" value="a">385<br>
+                <input type="radio" name="q7" value="b">104<br>
+                <input type="radio" name="q7" value="c">12<br>
+                <input type="radio" name="q7" value="d">24<br>
+            </div>
+            <div class="pregunta">
+                <p>Una familia está conformada por 4 personas; papá, mamá y 2 niños, ellos utilizan el servicio de
+                    transporte urbano. El día lunes subieron en el bus papa y los 2 niños y pagaron 1 USD, El día martes
+                    utilizaron el bus papá, mamá y un niño y pagaron 1.25 USD. Si el pasaje de papá y mamá tiene el
+                    mismo valor, el pasaje de un adulto cuesta ___ USD y el de un niño cuesta ___ USD.</p>
+                <input type="radio" name="q8" value="a">0.25; 0.75<br>
+                <input type="radio" name="q8" value="b">0.50; 0.25<br>
+                <input type="radio" name="q8" value="c">0.50; 0.50<br>
+                <input type="radio" name="q8" value="d">1.25; 1.00<br>
+            </div>
+            <div class="pregunta">
+                <p>Una empresa establece en su normativa que se realizarán dos tipos de descuentos al salario. Juan
+                    tiene un mensual de 1500 USD y de este monto de descuenta el 6% por atrasos, además se elimina el 8%
+                    del restante por multas. Si Juan registra una multa y un atraso, determine la cantidad de dinero
+                    aproximando que recibirá al final del mes.</p>
+                <input type="radio" name="q9" value="a">1387<br>
+                <input type="radio" name="q9" value="b">1297<br>
+                <input type="radio" name="q9" value="c">1290<br>
+                <input type="radio" name="q9" value="d">1417<br>
+            </div>
+            <div class="pregunta">
+                <p>Un joven visita Las 700 Gradas, una localidad en la parroquia de Pifo. El sube hasta la grada 592, y
+                    para avanzar más rápido, decide dar pasos de 2 gradas. ¿En cuántos pasos de 2 gradas llegará a la
+                    cima?</p>
+                <input type="radio" name="q10" value="a">54<br>
+                <input type="radio" name="q10" value="b">55<br>
+                <input type="radio" name="q10" value="c">53<br>
+                <input type="radio" name="q10" value="d">52<br>
+            </div>
+            <div class="pregunta">
+                <p>Una persona pretende obtener el modelo matemático de un circuito electrónico en serie con resistencia
+                    constante. Cuando alimenta el circuito con un voltaje de 9 V, mide que la corriente que circula es 2
+                    A, mientras que, cuando alimenta el circuito con una fuente constante de 12 V, la corriente es 2,75
+                    A. Si luego de otras mediciones se logra establecer que la relación entre la corriente y el voltaje
+                    es lineal, determine la variación de corriente por cada voltio de la fuente para que la persona
+                    pueda definir el modelado matemático del circuito.
+                </p>
+
+                <input type="radio" name="q11" value="a">1/4<br>
+                <input type="radio" name="q11" value="b">4<br>
+                <input type="radio" name="q11" value="c">-4<br>
+                <input type="radio" name="q11" value="d">-1/4<br>
+            </div>
+            <!--VERBAL-->
+            <div class="pregunta">
+                <p>Identifique la paráfrasis correcta.</p>
+                <p>El cerebro no es un vaso por llenar, sino una lámpara por encender.</p>
+                <input type="radio" name="q12" value="a">Aprender es un proceso que requiere presión externa.<br>
+                <input type="radio" name="q12" value="b">Aprender no consiste en memorizar datos, sino en desarrollar un
+                pensamiento propio.<br>
+                <input type="radio" name="q12" value="c">El aprendizaje consiste en memorizar una gran cantidad de
+                información en poco tiempo.<br>
+                <input type="radio" name="q12" value="d">El aprendizaje es un acto que depende solo de uno mismo.<br>
+            </div>
+            <div class="pregunta">
+                <p>Con base en el caso, identifique el eslogan que emplea el nivel de lenguaje adecuado para el
+                    destinatario al que se dirige.</p>
+                <p>Una exclusiva firma de ropa para dama acaba de sacar al mercado una elegante línea de prendas que han
+                    sido diseñadas exclusivamente para la mujer oficinista. Los creativos encargados del marketing deben
+                    elegir una frase publicitaria para hacer el lanzamiento de este producto.</p>
+                <input type="radio" name="q13" value="a">Diversión y comodidad para la gente súper pilas como tú, ven y
+                atrévete a romper los esquemas y ser original.<br>
+                <input type="radio" name="q13" value="b">Elegancia y versatilidad son cualidades de la nueva línea de
+                prendas diseñada para quienes gustan de la moda.<br>
+                <input type="radio" name="q13" value="c">Ponte pilas y decide tu estilo con la nueva línea diseñada para
+                gente divertida y despreocupada como tú.<br>
+                <input type="radio" name="q13" value="d">Tienes un look único y libre, vente de una a nuestros locales y
+                cambia tu imagen con un estilo buena onda.<br>
+            </div>
+
+            <div class="pregunta">
+                <p>Los nuevos tiempos traen variedad de sabores. Existe un interés mundial en probar la cocina de otras
+                    culturas, Esto puede deberse a diversos factores como la migración y el estado de las
+                    telecomunicaciones, que nos presentan cada día más información sobre otras culturas, incluida su
+                    forma de preparar los alimentos.</p>
+                <p>Con base en el texto, relacione la palabra con su significado.</p>
+                <table>
+                    <tr>
+                        <th>Palabra</th>
+                        <th>Significado</th>
+                    </tr>
+                    <tr>
+                        <td>Cultura</td>
+                        <td>a&#41; Aparato para preparar alimentos</td>
+                    </tr>
+                    <tr>
+                        <td>Cocina</td>
+                        <td>b&#41; Arte de guisar de cada país</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>c&#41; Modo de vida y costumbre </td>
+                    </tr>
+                </table><br>
+                <input type="radio" name="q14" value="a">1c, 2b<br>
+                <input type="radio" name="q14" value="b">1a, 2b<br>
+                <input type="radio" name="q14" value="c">1c, 2a<br>
+                <input type="radio" name="q14" value="d">1a, 2c<br>
+            </div>
+            <div class="pregunta">
+                <p>Con base en el texto, identifique el antónimo de la palabra marcada con negrita.</p>
+                <p>Bolivia es un país muy <b>variado</b>, localizado en América del Sur.</p>
+                <input type="radio" name="q15" value="a">Homogéneo<br>
+                <input type="radio" name="q15" value="b">Heterogéneo<br>
+                <input type="radio" name="q15" value="c">Profuso<br>
+                <input type="radio" name="q15" value="d">Diverso<br>
+            </div>
+            <div class="pregunta">
+                <p>Ordene las proposiciones según la sintaxis de las oraciones simples.</p>
+                <p>1.El miércoles<br>2.Tus amigos<br>3.La Cima de la Libertad<br>4.Visitaron</p>
+                <input type="radio" name="q16" value="a">1.3.2.4<br>
+                <input type="radio" name="q16" value="b">4,3,2,1<br>
+                <input type="radio" name="q16" value="c">2,1,4,3<br>
+                <input type="radio" name="q16" value="d">2.4.3.1<br>
+            </div>
+
+            <div class="pregunta">
+                <p>Identifique la oración que cumpla las normas ortográficas.</p>
+                <input type="radio" name="q17" value="a">La casa fue evacuada luego de los temblores nocturnos<br>
+                <input type="radio" name="q17" value="b">La evaluación se centró en los postulados de la evolución<br>
+                <input type="radio" name="q17" value="c">Algunas personas evaden lo que dice el evangelio<br>
+                <input type="radio" name="q17" value="d">Es evidente que aquellos eventos no fueron fortuitos<br>
+            </div>
+
+            <div class="pregunta">
+                <p>Con base en las premisas, identifique la conclusión.</p>
+                <p>
+                <ul>
+                    <li>Las niñas son individuos menores de edad</li>
+                    <li>Los individuos menores de edad son seres humanos</li>
+                    <li>Los seres humanos pueden emplear el lenguaje no verbal</li>
+                </ul>
+                </p>
+                <input type="radio" name="q18" value="a">Los individuos menores de edad son niñas<br>
+                <input type="radio" name="q18" value="b">Los seres humanos son individuos menores de edad<br>
+                <input type="radio" name="q18" value="c">Las niñas pueden emplear lenguaje no verbal<br>
+                <input type="radio" name="q18" value="d">Quienes emplean el lenguaje no verbal son niñas<br>
+            </div>
+
+            <div class="pregunta">
+                <p>Con base en el texto, identifique la tesis.</p>
+                <p>Investigadores españoles [...] han realizado un estudio sobre cómo reacciona el sisón, ave amenazada
+                    durante el invierno, ante la presencia del hombre en ambientes cerealistas o medios agrarios
+                    abiertos. El trabajo publicado en la revista Behavioral Ecology muestra que las aves tienen un nivel
+                    de estrés fisiológico significativamente más alto durante el fin de semana que antes o después del
+                    mismo.<br>"Los animales pueden percibir al hombre como una amenaza o un posible depredador. Por
+                    ello, las actividades humanas que conlleven un contacto del hombre con la fauna silvestre pueden
+                    causar estrés fisiológico y cambios de comportamiento en ese entorno", explica la investigadora del
+                    CSIC Beatriz Arroyo [...] Este estudio ha constatado que durante los fines de semana hay una mayor
+                    frecuencia de actividades humanas en las zonas agrícolas, incluida la presencia de cazadores, de
+                    paseantes y de ciclistas. Para medir el nivel de estrés que llegan a generar estas actividades, los
+                    investigadores han empleado una hormona, la corticosterona, presente en las heces de los sisones. El
+                    análisis ha mostrado que el grado de estrés aumenta con la intensidad de las molestias,
+                    particularmente las relacionadas con la caza (presencia de cazadores, perros o frecuencia de
+                    disparos)." También hemos observado que durante los fines de semana los sisones pasan más tiempo
+                    vigilando o volando, comportamientos que son típicamente antipredatorios. En cambio, tras el fin de
+                    semana, dedican más tiempo a comer para recuperarse del gasto energético sufrido durante esos dos
+                    días", comenta la investigadora.</p>
+                <input type="radio" name="q19" value="a">Las aves tienen un nivel de estrés fisiológico
+                significativamente más alto durante el fin de semana que antes o después del mismo.<br>
+                <input type="radio" name="q19" value="b">Durante los fines de semana hay una mayor frecuencia de
+                actividades humanas en las zonas agrícolas.<br>
+                <input type="radio" name="q19" value="c">Para medir el nivel de estrés en las aves, los investigadores
+                han empleado una hormona, la corticosterona, presente en las heces de los sisones.<br>
+                <input type="radio" name="q19" value="d">Los animales pueden percibir al hombre como una amenaza o un
+                posible depredador.<br>
+            </div>
+
+            <div class="pregunta">
+                <p>Identifique el elemento metaforizado.</p>
+                <p>Lluvia, mar celestial,<br>número infinito de<br>hilos de cristal<br>recorriendo mi
+                    ventana.<br>Composición efímera<br>de vitrales líquidos<br>en el cielo.<br>Espectáculo de agujas
+                    líquidas<br>que acribillan la calzada.<br>Agua impulsiva<br>que cae de pronto<br>y calma la sed del
+                    mundo.</p>
+                <input type="radio" name="q20" value="a">Mar<br>
+                <input type="radio" name="q20" value="b">Lluvia<br>
+                <input type="radio" name="q20" value="c">Agua<br>
+                <input type="radio" name="q20" value="d">Cristal<br>
+            </div>
+            <!--PREGUNTA 21 a la 40-->
+            <div class="pregunta">
+                <p>¿Qué tipo de texto es?</p>
+                <img src="images/1b.png" alt="Pasos para lavarse las manos"><br>
+                <input type="radio" name="q21" value="a">Descriptivo<br>
+                <input type="radio" name="q21" value="b">Instructivo<br>
+                <input type="radio" name="q21" value="c">Explicativo<br>
+                <input type="radio" name="q21" value="d">Argumentativo<br>
+            </div>
+
+            <div class="pregunta">
+                <p>Identifique la oración que se encuentra sintácticamente ordenada.</p>
+                <input type="radio" name="q22" value="a">Estuvieron investigando los futuros médicos diversas patologías
+                en el laboratorio para encontrar posibles curas<br>
+                <input type="radio" name="q22" value="b">Diversas patologías estuvieron investigando en el laboratorio
+                los futuros médicos para encontrar posibles curas<br>
+                <input type="radio" name="q22" value="c">Los futuros médicos estuvieron investigando diversas patologías
+                en el laboratorio para encontrar posibles curas<br>
+                <input type="radio" name="q22" value="d">Para encontrar posibles curas estuvieron investigando los
+                futuros médicos diversas patologías en el laboratorio.<br>
+            </div>
+
+            <div class="pregunta">
+                <p>Complete el enunciado con el conector que indique explicación.</p>
+                <p>El montubio, _________ el campesino costeño, está presente de forma recurrente en la literatura
+                    ecuatoriana del realismo social.</p>
+                <input type="radio" name="q23" value="a">también<br>
+                <input type="radio" name="q23" value="b">igual que<br>
+                <input type="radio" name="q23" value="c">así como<br>
+                <input type="radio" name="q23" value="d">es decir<br>
+            </div>
+            <div class="pregunta">
+                <p>Complete la analogía</p>
+                <p>Pausa es a ____________ como ____________ es a trabajo. </p>
+                <input type="radio" name="q24" value="a">Descanso - eficiencia<br>
+                <input type="radio" name="q24" value="b">Ocio - actividad<br>
+                <input type="radio" name="q24" value="c">Reposo - ánimo<br>
+                <input type="radio" name="q24" value="d">Acción - compromiso<br>
+            </div>
+
+            <div class="pregunta">
+                <p>Identifique el enunciado que contiene palabras homógrafas.</p>
+                <input type="radio" name="q25" value="a">La alpaca escapó porque la cadena hecha de alpaca no pudo
+                resistir la increíble fuerza del animal<br>
+                <input type="radio" name="q25" value="b">Recordé que iba a salir con vos pero tuve una gripe tan fuerte
+                que hasta perdí la voz<br>
+                <input type="radio" name="q25" value="c">El bello tejido de aquella malla le hizo pensar que aquel era
+                un antiguo tesoro maya<br>
+                <input type="radio" name="q25" value="d">El texto era rico en figuras como el apóstrofe, aunque
+                utilizaba de manera incorrecta el apóstrofo<br>
+            </div>
+
+            <div class="pregunta">
+                <p>Con base en el texto, identifique la idea principal.</p>
+                <p>A pesar de ser un ecosistema que recibe agua de lluvia solo tres meses al año, los bosques secos del
+                    Ecuador presentan gran cantidad de especies endémicas, por lo que el interés en el estudio de este
+                    ecosistema ha crecido considerablemente en los últimos años. Particularmente, la Reserva Ecológica
+                    Arenillas, ubicada en la provincia de El Oro, posee una de las áreas más extensas de bosque y
+                    matorral seco del país, donde habitan mamíferos como el puma, el zorro, el armadillo de nueve
+                    bandas, la zarigüeya, entre otros. Además, es el hogar de más de cien tipos de aves. En estos
+                    ecosistemas viven diversas especies de anfibios como el sapo bocón, variedad que hoy en día está
+                    seriamente amenazada.<br>Modificado con fines pedagógicos. Recuperado el 26 de mayo de 2017 en
+                    http://bit.ly/2r7qxr0 </p>
+                <input type="radio" name="q26" value="a">La importancia de estudiar los bosques secos ha crecido
+                considerablemente en los últimos años<br>
+                <input type="radio" name="q26" value="b">En estos ecosistemas viven diversas especies de anfibios como
+                el sapo "bocón", variedad que hoy en día está seriamente amenazada<br>
+                <input type="radio" name="q26" value="c">La Reserva Ecológica Arenillas contiene mamíferos como el puma,
+                el armadillo, la zarigüeya y es el hogar de más de cien tipos de aves<br>
+                <input type="radio" name="q26" value="d">Los bosques secos del Ecuador presentan gran cantidad de
+                especies endémicas<br>
+            </div>
+
+            <div class="pregunta">
+                <p>Identifique el enunciado que utiliza correctamente la concordancia nominal y verbal.</p>
+                <input type="radio" name="q27" value="a">El trabajo y el compromiso de los integrantes hacen que todo su
+                esfuerzo valga la pena<br>
+                <input type="radio" name="q27" value="b">La ciencia y la tecnología ha avanzado de forma exponencial en
+                las últimas décadas<br>
+                <input type="radio" name="q27" value="c">El investigador y catedrático hallaron una nueva especie de
+                anfibio en la Amazonía<br>
+                <input type="radio" name="q27" value="d">La escritora y periodista publicó su primer libro antes de
+                terminar el colegio<br>
+            </div>
+            <div class="pregunta">
+                <p>Identifique la causa por la que Vlad III estuvo interesado en la propuesta papal de Pío II</p>
+                <p>El papa Pío II reunió a los representantes de la cristiandad en el Concilio de Mantua (1459) para
+                    convocar una nueva cruzada contra los turcos que, desde la toma en Constantinopla, avanzaban por el
+                    Este de Europa. El llamamiento fue recibido con indiferencia por los líderes europeos –más
+                    preocupados por las disputas entre ellos– con la excepción de Matías Corvino, rey de Hungría, y Vlad
+                    III, príncipe de Valaquia, también conocido como Vlad Tepes, Vlad el Empalador… o Drácula. La
+                    crueldad de este personaje histórico sería la fuente de inspiración para la criatura literaria que
+                    vio la luz en la novela de Bram Stoker, Drácula (1897). [...] Realmente, tanto Corvino como Vlad
+                    tenían a los turcos a las puertas y, lógicamente, eran los más interesados en que prosperase la
+                    propuesta; así que se aliaron y recibieron del Papa 40 mil ducados para reunir un ejército que
+                    detuviese a los turcos. Sintiéndose fuerte, Vlad decidió no pagar el tributo exigido por el sultán
+                    Mehmed II (10 mil ducados y 500 muchachos para su ejército de jenízaros) como muestra de vasallaje.
+                    [...] Ahora que es él quien controla la situación, y sin encomendarse al Papa ni a su aliado, decide
+                    seguir adelante. Sanz, J. (2013). Cuando Drácula se convirtió en el mejor aliado del Papa.
+                    Recuperado el 27 de septiembre de 2015 en: http://bit.ly/1DYWt86 </p>
+                <input type="radio" name="q28" value="a">Mehmed II le exigió un tributo de 10 mil ducados y 500
+                muchachos para su ejército de jenízaros<br>
+                <input type="radio" name="q28" value="b">Corvino y Vlad III se aliaron y recibieron 40 mil ducados del
+                Papa para enfrentar a los turcos<br>
+                <input type="radio" name="q28" value="c">Constantinopla fue conquistada por los turcos mientras los
+                líderes europeos disputaban entre sí <br>
+                <input type="radio" name="q28" value="d">Corvino (rey de Hungría) y Vlad III (príncipe de Valaquia)
+                tenían a los turcos a las puertas<br>
+            </div>
+
+            <div class="pregunta">
+                <p>Un hombre de unos 25 años entra en un cibercafé y pide una computadora. Lleva una carpeta con estados
+                    de cuenta de dos tarjetas de crédito, navega unos minutos. Se levanta, paga y se dispone a salir del
+                    local; cuando se acerca a la puerta, suena su teléfono celular, él responde y empieza a explicar a
+                    alguien que en un par de semanas podrá comprarse un vehículo.</p>
+                <p>Identifique la inferencia correcta con base en la información del párrafo.</p>
+                <input type="radio" name="q29" value="a">El hombre ha visto en internet los resultados de la lotería y
+                sabe que la ha ganado<br>
+                <input type="radio" name="q29" value="b">El hombre va a ser embargado por los acreedores de las tarjetas
+                de crédito<br>
+                <input type="radio" name="q29" value="c">El hombre estaba verificando precios de automóviles en
+                internet<br>
+                <input type="radio" name="q29" value="d">El hombre envió un correo a la persona que lo llamó<br>
+            </div>
+            <!--ABSTRACTO-->
+            <div class="pregunta">
+                <p>Identifique la proyección bidimensional del cubo.</p>
+                <img src="images/1c.png" alt="cubo con figuras"><br>
+                <input type="radio" name="q30" value="a"><img src="images/1d.png" alt="vista bidimensional"
+                    class="rectangulo"><br>
+                <input type="radio" name="q30" value="b"><img src="images/1e.png" alt="vista bidimensional"
+                    class="rectangulo"><br>
+                <input type="radio" name="q30" value="c"><img src="images/1f.png" alt="vista bidimensional"
+                    class="rectangulo"><br>
+                <input type="radio" name="q30" value="d"><img src="images/1g.png" alt="vista bidimensional"
+                    class="rectangulo"><br>
+            </div>
+            <div class="pregunta">
+                <p>Identifique la figura que tiene un patrón distinto a las demás.</p>
+                <input type="radio" name="q31" value="a"><img src="images/1h.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q31" value="b"><img src="images/1i.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q31" value="c"><img src="images/1j.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q31" value="d"><img src="images/1k.png" alt="patrones" class="cuadrado"><br>
+            </div>
+
+            <div class="pregunta">
+                <p>Identifique la figura que remplaza al signo de interrogación en la analogía. </p>
+                <img src="images/1l.png" alt="analogia con figuras" class="secuencia"><br>
+                <input type="radio" name="q32" value="a"><img src="images/1m.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q32" value="b"><img src="images/1n.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q32" value="c"><img src="images/1o.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q32" value="d"><img src="images/1p.png" alt="patrones" class="cuadrado"><br>
+            </div>
+            <div class="pregunta">
+                <p>Identifique la figure que cumple con el patrón mostrado.</p>
+                <img src="images/1q.png" alt="patrones" class="secuencia"><br>
+                <input type="radio" name="q33" value="a"><img src="images/1r.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q33" value="b"><img src="images/1s.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q33" value="c"><img src="images/1t.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q33" value="d"><img src="images/1u.png" alt="patrones" class="cuadrado"><br>
+            </div>
+            <div class="pregunta">
+                <p>Identifique la vista indicada de la figura.</p>
+                <img src="images/1v.png" alt="vista de una figura"><br>
+                <input type="radio" name="q34" value="a"><img src="images/1w.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q34" value="b"><img src="images/1x.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q34" value="c"><img src="images/1y.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q34" value="d"><img src="images/1z.png" alt="patrones" class="cuadrado"><br>
+            </div>
+            <div class="pregunta">
+                <p>Identifique el cuerpo que se forma al armar el modelo </p>
+                <img src="images/2a.png" alt="Modelo para armar un cubo" class="secuencia"><br>
+                <input type="radio" name="q35" value="a"><img src="images/2b.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q35" value="b"><img src="images/2c.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q35" value="c"><img src="images/2d.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q35" value="d"><img src="images/2e.png" alt="patrones" class="cuadrado"><br>
+            </div>
+            <div class="pregunta">
+                <p>Identifique la figura que se obtiene al rotar la imagen de 135° en sentido antihorario.</p>
+                <img src="images/2f.png" alt="figura de un pentagono y estrella"><br>
+                <input type="radio" name="q36" value="a"><img src="images/2g.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q36" value="b"><img src="images/2h.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q36" value="c"><img src="images/2i.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q36" value="d"><img src="images/2j.png" alt="patrones" class="cuadrado"><br>
+            </div>
+            <div class="pregunta">
+                <img src="images/2k.png" alt="secuencia de figuras" class="secuencia"><br>
+                <input type="radio" name="q37" value="a"><img src="images/2l.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q37" value="b"><img src="images/2m.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q37" value="c"><img src="images/2n.png" alt="patrones" class="cuadrado"><br>
+                <input type="radio" name="q37" value="d"><img src="images/2o.png" alt="patrones" class="cuadrado"><br>
+            </div>
+            <div class="pregunta">
+                <img src="images/2p.png" alt="secuencia de figuras" class="secuencia"><br>
+                <input type="radio" name="q38" value="a"><img src="images/2q.png" alt="secuencia" class="cuadrado"><br>
+                <input type="radio" name="q38" value="b"><img src="images/2r.png" alt="secuencia" class="cuadrado"><br>
+                <input type="radio" name="q38" value="c"><img src="images/2s.png" alt="secuencia" class="cuadrado"><br>
+                <input type="radio" name="q38" value="d"><img src="images/2t.png" alt="secuencia" class="cuadrado"><br>
+            </div>
+            <div class="pregunta">
+                <p>Identifique la figura que corresponde a la rotación de 90° del objeto.</p>
+                <img src="images/2u.png" alt="figura con puntos"><br>
+                <input type="radio" name="q39" value="a"><img src="images/2v.png" alt="giro" class="cuadrado"><br>
+                <input type="radio" name="q39" value="b"><img src="images/2w.png" alt="giro" class="cuadrado"><br>
+                <input type="radio" name="q39" value="c"><img src="images/2x.png" alt="giro" class="cuadrado"><br>
+                <input type="radio" name="q39" value="d"><img src="images/2y.png" alt="giro" class="cuadrado"><br>
+            </div>
+            <div class="pregunta">
+                <p>Identifique la vista superior de la figura.</p>
+                <img src="images/2z.png" alt="vista"><br>
+                <input type="radio" name="q40" value="a"><img src="images/3a.png" alt="vista" class="cuadrado"><br>
+                <input type="radio" name="q40" value="b"><img src="images/3b.png" alt="vista" class="cuadrado"><br>
+                <input type="radio" name="q40" value="c"><img src="images/3c.png" alt="vista" class="cuadrado"><br>
+                <input type="radio" name="q40" value="d"><img src="images/3d.png" alt="vista" class="cuadrado"><br>
+            </div>
+            <button id="prevButton" disabled>Anterior</button>
+            <button id="nextButton">Siguiente</button>
+            <h3 id="resultado"></h3>
+            <h3 id="puntaje"></h3>
+            <div id="detalleResultados"></div>
+        </div>
+    </div>
+    <footer>García Moreno y Véloz esquina, Riobamba, Ecuador</footer>
+</body>
+
+</html>
