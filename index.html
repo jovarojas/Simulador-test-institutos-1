@@ -102,7 +102,7 @@
                 localStorage.removeItem("tiempoRestante"); // Limpiar tiempo restante al finalizar
 
                 let aciertos = 0;
-                let puntajeFinal = 0;
+                let puntajeFinal = 400;
 
                 let detalleResultados = document.getElementById("detalleResultados");
                 detalleResultados.innerHTML = "<h3>Resultados detallados:</h3>";
@@ -127,7 +127,7 @@
                     detalleResultados.innerHTML += resultadoTexto;
                 }
 
-                puntajeFinal = (aciertos / preguntas.length) * 1000; // Ajuste según escala
+                puntajeFinal += (aciertos * 15);
 
                 document.getElementById("resultado").innerText = "Examen finalizado. Aciertos: " + aciertos + " de " + preguntas.length;
                 document.getElementById("puntaje").innerHTML = "Puntaje final: " + puntajeFinal.toFixed(2) + "/1000";
